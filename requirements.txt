@@ -4,3 +4,8 @@ lxml>=5.0
 python-dotenv>=1.0
 xlsxwriter>=3.2
 anthropic>=0.40
+# build_rac_tam.py, rac_analysis.py and constructconnect/build_workbook.py all
+# import pandas; openpyxl reads workbooks back after a soffice recalculation,
+# which is how output is verified. Both were missing until 2026-08-17.
+pandas>=2.0
+openpyxl>=3.1
