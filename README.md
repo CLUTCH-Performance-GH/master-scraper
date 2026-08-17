@@ -103,6 +103,8 @@ its evidence go in `docs/`, not just a code comment. See the 403 section of
   10,000-record ceiling, what a 403 really means, the Excel repair traps
 - [`docs/cmu-producers.md`](docs/cmu-producers.md) — building a producer contact
   list from scratch, and the bugs that cost real contacts
+- [`docs/NEXT_SESSION_PROMPT.md`](docs/NEXT_SESSION_PROMPT.md) — a copy-paste
+  prompt for picking up the CMC TAM work, written to onboard someone new
 
 ## Licence
 
