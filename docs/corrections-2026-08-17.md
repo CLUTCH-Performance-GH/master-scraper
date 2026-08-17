@@ -141,9 +141,13 @@ addresses are counted twice under case variants:
 | **8,708** | lower-cased — the true distinct count |
 | 8,231 | lower-cased, on named-person rows only |
 
-48 addresses appear under more than one capitalisation (`aSalinas@…` and
-`asalinas@…` are the same mailbox). The overstatement is 0.55%, so no
-conclusion changes, but the number is wrong as published.
+48 addresses appear under more than one capitalisation — the shape is
+`aExample@` alongside `aexample@`, which is one mailbox counted twice. The
+overstatement is 0.55%, so no conclusion changes, but the number is wrong as
+published.
+
+(The real examples are not reproduced here. They are live addresses belonging
+to named individuals in the vendor extract, and this repository is public.)
 
 **Done.** `jobs/contacts_by_rac.py` lower-cases before deduplicating. The
 existing `load_external_exclusions` in `jobs/build_workbook.py` already
