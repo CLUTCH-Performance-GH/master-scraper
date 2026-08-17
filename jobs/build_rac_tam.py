@@ -31,6 +31,7 @@ from pathlib import Path
 import xlsxwriter
 
 ROLLUP = Path("data/rac_rollup.json")
+CONTACTS = Path("data/contacts_rac.json")
 PRODUCERS = Path("data/producers_national.json")
 CENSUS = Path("data/census_cbp_rac.json")
 SHIPMENTS = Path("data/census_shipments_rac.json")
@@ -49,8 +50,8 @@ RAC_STATES = {
 }
 
 TABS = ["Read Me", "Assumptions", "TAM by RAC", "5-Year Projection",
-        "Projects by RAC", "Producers by RAC", "State Mapping", "Data Status",
-        "Sources & Method"]
+        "Projects by RAC", "Contacts by RAC", "Target Companies", "Producers by RAC",
+        "State Mapping", "Data Status", "Sources & Method"]
 
 # Assumptions tab layout. Row numbers are referenced by formulas throughout, so
 # the block and these constants must move together.
@@ -74,6 +75,9 @@ def main() -> None:
                  f"  build it with: PYTHONPATH=. .venv/bin/python "
                  f"jobs/rollup_from_workbook.py <ConstructConnect_Leads_V3.xlsx>")
     racs = {r["rac"]: r for r in roll["racs"]}
+
+    con = _load(CONTACTS)
+    con_by_rac = {r["rac"]: r for r in con["racs"]} if con else {}
 
     cen = _load(CENSUS)
     cen_by_rac = {r["rac"]: r for r in cen["racs"]} if cen else {}
@@ -481,6 +485,98 @@ def main() -> None:
         ws.write(rr, 4, s.get("assessable_projects", 0), f["num"])
         ws.write(rr, 5, s.get("assessable_value", 0), f["usd"])
 
+    # ---------------- Contacts by RAC ----------------------------------------
+    ws = wb.add_worksheet("Contacts by RAC")
+    ws.set_column(0, 0, 26); ws.set_column(1, 11, 15)
+    ws.hide_gridlines(2)
+    ws.write(0, 0, "Who there is to call, by RAC", f["h1"])
+    nav(ws, 1)
+    if not con:
+        ws.write(2, 0, "NOT LOADED. Build it with: PYTHONPATH=. .venv/bin/python "
+                       "jobs/contacts_by_rac.py <ConstructConnect_Leads_V3.xlsx>", f["no"])
+        ws.set_row(2, 30)
+    else:
+        ws.write(2, 0,
+                 "ROWS are one per person-per-project; PEOPLE are deduplicated, because a "
+                 "specifier on eleven projects is still one phone call. The two differ by "
+                 "roughly half, so the distinction decides whether the callable universe "
+                 "reads as 23,000 or 12,000. ASSESSABLE columns count only contacts on "
+                 "projects carrying a specific assessable masonry scope code - the ones that "
+                 "actually consume checkoff-bearing product.", f["note"])
+        ws.set_row(2, 56)
+        heads = ["RAC", "Contact Rows", "Distinct People", "Named Rows",
+                 "Personal Email", "Generic Email", "With Phone", "Specifiers",
+                 "Owners", "Procurement", "Assessable Rows", "Assessable People"]
+        for c, h in enumerate(heads):
+            ws.write(4, c, h, f["hdr"])
+        ws.set_row(4, 34)
+        keys = ["rows", "distinct_people", "named_rows", "personal_email",
+                "generic_email", "with_phone", "specifier", "owner", "procurement",
+                "a_rows", "a_distinct_people"]
+        for i, rac in enumerate(RACS):
+            d = con_by_rac.get(rac, {})
+            rr = 5 + i
+            ws.write(rr, 0, rac, f["txt"])
+            for c, k in enumerate(keys):
+                ws.write(rr, 1 + c, d.get(k, 0), f["num"])
+        tr2 = 5 + len(RACS)
+        ws.write(tr2, 0, "TOTAL (sum of rows)", f["tot"])
+        for c, k in enumerate(keys):
+            L = xlsxwriter.utility.xl_col_to_name(1 + c)
+            ws.write_formula(tr2, 1 + c, f"=SUM({L}6:{L}{tr2})", f["tot"],
+                             sum(con_by_rac.get(x, {}).get(k, 0) for x in RACS))
+        # The distinct-people columns must NOT be summed: a person working across
+        # two regions is distinct in each. The union is written as its own row.
+        nr = tr2 + 1
+        ws.write(nr, 0, "NATIONAL (deduplicated)", f["h2"])
+        # column indices must track `keys`: Distinct People is keys[1] -> col 2,
+        # Assessable People is keys[10] -> col 11. Writing past col 11 puts the
+        # figure outside the table where nobody sees it.
+        ws.write(nr, 1 + keys.index("distinct_people"),
+                 con.get("national_distinct_people", 0), f["num"])
+        ws.write(nr, 1 + keys.index("a_distinct_people"),
+                 con.get("national_distinct_people_assessable", 0), f["num"])
+        ws.write(nr + 1, 0,
+                 f"The two distinct-people columns do not add up. Summing them gives "
+                 f"{sum(con_by_rac.get(x, {}).get('distinct_people', 0) for x in RACS):,}, "
+                 f"which double-counts the {con.get('cross_region_double_count', 0):,} people "
+                 f"who appear in more than one region. The NATIONAL row is the union and is "
+                 f"the number to quote.", f["note"])
+        ws.set_row(nr + 1, 30)
+
+    # ---------------- Target Companies ---------------------------------------
+    ws = wb.add_worksheet("Target Companies")
+    ws.set_column(0, 0, 26); ws.set_column(1, 1, 46); ws.set_column(2, 6, 15)
+    ws.hide_gridlines(2)
+    ws.write(0, 0, "Relationship targets: firms recurring across many projects", f["h1"])
+    nav(ws, 1)
+    if not con:
+        ws.write(2, 0, "NOT LOADED. Run jobs/contacts_by_rac.py first.", f["no"])
+    else:
+        ws.write(2, 0, "Top 25 firms per region, ranked by ASSESSABLE-scope projects first, "
+                       "then by total projects. A firm appearing on many jobs is a better "
+                       "relationship target than the same number of unrelated contacts. "
+                       "Firm names are the vendor's verbatim and are NOT entity-resolved, so "
+                       "the same company can appear under name variants.", f["note"])
+        ws.set_row(2, 44)
+        for c, h in enumerate(["RAC", "Company", "HQ State", "Assessable Projects",
+                               "Total Projects", "Contact Rows", "Named Contacts"]):
+            ws.write(4, c, h, f["hdr"])
+        ws.set_row(4, 30)
+        rr = 5
+        for rac in RACS:
+            for e in con.get("top_companies", {}).get(rac, []):
+                ws.write(rr, 0, rac, f["txt"])
+                ws.write(rr, 1, e["company"], f["txt"])
+                ws.write(rr, 2, e.get("state", ""), f["txt"])
+                ws.write(rr, 3, e["assessable_projects"], f["num"])
+                ws.write(rr, 4, e["projects"], f["num"])
+                ws.write(rr, 5, e["contact_rows"], f["num"])
+                ws.write(rr, 6, e["named"], f["num"])
+                rr += 1
+        ws.autofilter(4, 0, rr - 1, 6)
+        ws.freeze_panes(5, 0)
+
     # ---------------- Producers by RAC ---------------------------------------
     ws = wb.add_worksheet("Producers by RAC")
     ws.set_column(0, 0, 26); ws.set_column(1, 4, 18)
@@ -559,6 +655,7 @@ def main() -> None:
         ws.write(rr + 1, c, h, f["hdr"])
     for i, (p, by) in enumerate([
         (ROLLUP, "jobs/rollup_from_workbook.py <ConstructConnect_Leads_V3.xlsx>"),
+        (CONTACTS, "jobs/contacts_by_rac.py <ConstructConnect_Leads_V3.xlsx>"),
         (CENSUS, "jobs/census_cbp_rac.py  (needs www2.census.gov)"),
         (SHIPMENTS, "jobs/census_shipments_rac.py  (needs api.census.gov + CENSUS_API_KEY)"),
         (PRODUCERS, "jobs/discover_producers_national.py  (needs Serper)"),

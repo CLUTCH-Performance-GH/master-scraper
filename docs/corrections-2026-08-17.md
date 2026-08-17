@@ -125,7 +125,47 @@ VIRTUAL_ENV=.venv uv pip install -r requirements.txt
 `soffice` is present, so the prescribed recalculate-don't-eyeball verification
 works unchanged.
 
-## 6. Minor — stale remote in the onboarding prompt
+## 6. The V3 deliverable's distinct-address count is inflated by case variants
+
+**Believed.** The V3 Summary tab reports "Distinct personal addresses
+(deduplicated): 8,756".
+
+**Observed.** That figure deduplicates addresses **as written**, without
+case-folding. Email domains are case-insensitive by specification and local
+parts are case-insensitive at every mainstream provider, so a handful of
+addresses are counted twice under case variants:
+
+| Count | Basis |
+|---|---|
+| 8,756 | as written — what the Summary tab reports |
+| **8,708** | lower-cased — the true distinct count |
+| 8,231 | lower-cased, on named-person rows only |
+
+48 addresses appear under more than one capitalisation (`aSalinas@…` and
+`asalinas@…` are the same mailbox). The overstatement is 0.55%, so no
+conclusion changes, but the number is wrong as published.
+
+**Done.** `jobs/contacts_by_rac.py` lower-cases before deduplicating. The
+existing `load_external_exclusions` in `jobs/build_workbook.py` already
+lower-cases, so de-duplication against Dennis's list was never affected — only
+the reported total. Worth correcting the next time the deliverable is rebuilt.
+
+## 7. Distinct people do not add up across regions
+
+Not a defect, but a trap worth naming because the workbook now publishes both
+numbers side by side.
+
+Summing per-region distinct-people counts gives 12,199. The true national
+figure is the union, 12,037: 162 named people appear on projects in more than
+one region and are legitimately distinct in each. Contact **rows** add up;
+distinct **people** do not. The Contacts by RAC tab writes the union on its own
+NATIONAL row and says in a note that the column does not sum to it.
+
+The same distinction matters for the headline: 23,420 contact rows are 12,037
+callable people, and only 6,391 of those sit on projects carrying an assessable
+masonry scope code.
+
+## 8. Minor — stale remote in the onboarding prompt
 
 `docs/NEXT_SESSION_PROMPT.md` line 9 points at `github.com/jacklumpe/master-scraper`.
 The actual remote is `github.com/CLUTCH-Performance-GH/master-scraper`. Left
