@@ -1,0 +1,63 @@
+# ---------------------------------------------------------------------------
+# Secrets. The repo is public: never commit these.
+# ---------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+credentials.json
+token.json
+
+# ---------------------------------------------------------------------------
+# Collected data. This is the important one.
+#
+# Everything under output/ and data/ is real business contact data: named
+# individuals with work emails and direct phone numbers. That is personal data
+# under CCPA/CPRA and PIPEDA regardless of it being a work address, and it is
+# licensed from vendors whose terms do not contemplate republication. The code
+# is shareable. What the code collected is not.
+# ---------------------------------------------------------------------------
+output/
+data/
+!data/.gitkeep
+
+# vendor-licensed source extracts
+*.xlsx
+*.xls
+*.csv
+!examples/*.csv
+
+# raw crawl payloads and checkpoints
+**/details_*.json
+**/discovery_*.json
+**/contacts/*.json
+**/checkpoints/
+*.sqlite3
+*.sqlite3-journal
+*.log
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# ---------------------------------------------------------------------------
+# macOS / editors
+# ---------------------------------------------------------------------------
+.DS_Store
+.idea/
+.vscode/
+*.swp
+~$*
+
+# Recon captures: raw search results naming real individuals
+**/recon_*.json
